@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+    .status-wrap {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 80px 0;
+        text-align: center;
+    }
+
+    /* ── CARD ── */
+    .status-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 56px 48px;
+        position: relative;
+        overflow: hidden;
+    }
+    .status-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: var(--gold);
+    }
+
+    /* ── ICON ── */
+    #status-icon { margin-bottom: 32px; }
+
+    /* spinner */
+    .pay-spinner-lg {
+        width: 52px; height: 52px;
+        border: 2px solid var(--border);
+        border-top-color: var(--gold);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* success / fail icons */
+    .status-icon-circle {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto;
+        font-size: 28px;
+    }
+    .status-icon-circle.success { background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; }
+    .status-icon-circle.danger { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; color: #ef4444; }
+
+    /* ── TEXT ── */
+    #main-heading {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 42px; letter-spacing: 3px;
+        color: var(--white); line-height: 1; margin: 0 0 12px;
+    }
+    #main-heading.text-success { color: #10b981; }
+    #main-heading.text-danger { color: #ef4444; }
+
+    #sub-heading {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px; letter-spacing: 0.5px;
+        color: var(--muted); font-weight: 300;
+        margin-bottom: 0;
+    }
+
+    /* ── ERROR ACTIONS ── */
+    #error-actions { margin-top: 32px; }
+    .pay-back-btn {
+        display: inline-block;
+        padding: 12px 32px;
+        border: 1px solid var(--gold);
+        color: var(--gold);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 10px; font-weight: 700;
+        letter-spacing: 3px; text-transform: uppercase;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    .pay-back-btn:hover { background: var(--gold); color: var(--black); }
+
+    /* ── FOOTER NOTE ── */
+    .status-note {
+        margin-top: 28px;
+        font-size: 10px; letter-spacing: 2px;
+        text-transform: uppercase; color: var(--muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="status-wrap">
+    <div id="payment-card" class="status-card">
+
+        <div id="status-icon">
+            <div class="pay-spinner-lg"></div>
+        </div>
+
+        <h2 id="main-heading">Processing Payment...</h2>
+        <p id="sub-heading">Please check your phone and enter your M-Pesa PIN.</p>
+
+        <div id="error-actions" class="d-none">
+            <a href="{% url 'fleet:customer-dashboard' %}" class="pay-back-btn">Back to Dashboard</a>
+        </div>
+
+        <p class="status-note">Do not refresh or close this window.</p>
+
+    </div>
+</div>
+
+<script>
+    const checkoutId = "{{ checkout_id }}";
+    const mainHeading = document.getElementById('main-heading');
+    const subHeading = document.getElementById('sub-heading');
+    const statusIcon = document.getElementById('status-icon');
+    const errorActions = document.getElementById('error-actions');
+
+    let checkStatus = setInterval(function() {
+        fetch("{% url 'payments:check_status' checkout_id %}")
+        .then(response => response.json())
+        .then(data => {
+            console.log("M-Pesa Status:", data.status);
+
+            if (data.status === 'Completed') {
+                clearInterval(checkStatus);
+                statusIcon.innerHTML = '<div class="status-icon-circle success">✓</div>';
+                mainHeading.innerText = "Payment Successful!";
+                mainHeading.classList.add('text-success');
+                subHeading.innerText = "Redirecting to your bookings...";
+                setTimeout(() => {
+                    window.location.href = "{% url 'fleet:customer-dashboard' %}";
+                }, 2000);
+            }
+
+            else if (data.status === 'Failed' || data.status === 'Cancelled') {
+                clearInterval(checkStatus);
+                statusIcon.innerHTML = '<div class="status-icon-circle danger">✕</div>';
+                mainHeading.innerText = "Payment " + data.status;
+                mainHeading.classList.add('text-danger');
+                subHeading.innerText = "The transaction was not completed. Please try again.";
+                errorActions.classList.remove('d-none');
+            }
+        })
+        .catch(err => console.error('Polling error:', err));
+    }, 3000);
+</script>
+
+{% endblock %}

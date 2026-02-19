@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+    .bk-wrap {
+        max-width: 580px;
+        margin: 0 auto;
+        padding: 60px 0;
+    }
+
+    /* ── HEADER ── */
+    .bk-header {
+        margin-bottom: 40px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--border);
+    }
+    .bk-header-tag {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 10px;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .bk-header-tag::before { content: ''; width: 24px; height: 1px; background: var(--gold); }
+    .bk-header h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 56px;
+        letter-spacing: 4px;
+        color: var(--white);
+        line-height: 0.9;
+        margin: 0 0 10px;
+    }
+    .bk-header-plate {
+        font-family: 'DM Sans', monospace;
+        font-size: 9px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        display: inline-block;
+        padding: 3px 12px;
+    }
+
+    /* ── FORM ── */
+    .bk-form { display: flex; flex-direction: column; gap: 24px; }
+
+    .bk-field { display: flex; flex-direction: column; gap: 8px; }
+    .bk-label {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .bk-input {
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--white);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 13px;
+        padding: 14px 18px;
+        outline: none;
+        transition: border-color 0.3s;
+        width: 100%;
+        color-scheme: dark;
+    }
+    .bk-input:focus { border-color: var(--gold); }
+
+    /* ── SUMMARY ── */
+    .bk-summary {
+        border: 1px solid var(--border);
+        background: var(--card);
+        overflow: hidden;
+    }
+    .bk-summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+    }
+    .bk-summary-row:last-child { border-bottom: none; }
+    .bk-summary-label {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .bk-summary-value {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px;
+        letter-spacing: 1px;
+        color: var(--white);
+    }
+    .bk-summary-total { background: rgba(255,255,255,0.02); }
+    .bk-summary-total .bk-summary-label { color: var(--white); font-size: 12px; }
+    .bk-summary-total .bk-summary-value {
+        font-size: 34px;
+        color: var(--gold);
+    }
+
+    /* ── BUTTON ── */
+    .bk-btn {
+        background: var(--gold);
+        border: none;
+        color: var(--black);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        padding: 18px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .bk-btn:hover { opacity: 0.85; }
+    .bk-btn svg { transition: transform 0.3s; }
+    .bk-btn:hover svg { transform: translateX(4px); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="bk-wrap">
+
+    <div class="bk-header">
+        <div class="bk-header-tag">New Reservation</div>
+        <h2>Book {{ car.brand }} {{ car.name }}</h2>
+        <div class="bk-header-plate">{{ car.plate_number }}</div>
+    </div>
+
+    <form method="POST" id="bookingForm" class="bk-form">
+        {% csrf_token %}
+
+        <div class="bk-field">
+            <label class="bk-label">Pick-up Date & Time</label>
+            <input type="datetime-local" id="pickup_date" name="pickup_date" class="bk-input" required>
+        </div>
+
+        <div class="bk-field">
+            <label class="bk-label">Return Date & Time</label>
+            <input type="datetime-local" id="return_date" name="return_date" class="bk-input" required>
+        </div>
+
+        <div class="bk-summary">
+            <div class="bk-summary-row">
+                <span class="bk-summary-label">Daily Rate</span>
+                <span class="bk-summary-value">Ksh <span id="daily_rate">{{ car.daily_rate }}</span></span>
+            </div>
+            <div class="bk-summary-row bk-summary-total">
+                <span class="bk-summary-label">Estimated Total</span>
+                <span class="bk-summary-value">Ksh <span id="total_display">0</span></span>
+            </div>
+        </div>
+
+        <button type="submit" class="bk-btn">
+            Confirm Reservation
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M1 6.5h11M7 1.5l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+
+    </form>
+</div>
+
+<script>
+    const pickupInput = document.getElementById('pickup_date');
+    const returnInput = document.getElementById('return_date');
+    const dailyRate = parseFloat(document.getElementById('daily_rate').innerText);
+    const totalDisplay = document.getElementById('total_display');
+
+    function calculateTotal() {
+        const pickup = new Date(pickupInput.value);
+        const returnDate = new Date(returnInput.value);
+
+        if (pickup && returnDate && returnDate > pickup) {
+            const diffInMs = returnDate - pickup;
+            let days = diffInMs / (1000 * 60 * 60 * 24);
+            days = Math.ceil(days);
+            const total = days * dailyRate;
+            totalDisplay.innerText = total.toLocaleString();
+        } else {
+            totalDisplay.innerText = "0";
+        }
+    }
+
+    pickupInput.addEventListener('change', calculateTotal);
+    returnInput.addEventListener('change', calculateTotal);
+</script>
+
+{% endblock %}
