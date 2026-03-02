@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
+
+# Load the .env file early so environment variables are available
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,16 +26,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3hge62y-s(5y&vu_o188x#3mj-wv-jy^#q7er*#o74&bg%@e%8'
+# Now pulls from environment variables for security
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-3hge62y-s(5y&vu_o188x#3mj-wv-jy^#q7er*#o74&bg%@e%8')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['melodee-interwrought-intemperately.ngrok-free.dev', 
-    '127.0.0.1', 
-    'localhost']
+# Allow hosts defined in the environment, falling back to localhost/ngrok
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS', 
+    'fleet.dazuhub.com,localhost,127.0.0.1'
+).split(',')
 
+# ==========================================
+# REVERSE PROXY & CSRF SETTINGS
+# ==========================================
+# Tell Django it's behind a secure proxy (Traefik) so it doesn't fail CSRF checks on HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Trust your specific domain for CSRF verification
+CSRF_TRUSTED_ORIGINS = ['https://fleet.dazuhub.com']
 
 # Application definition
 
@@ -46,8 +61,8 @@ INSTALLED_APPS = [
     'fleet',
     'bookings',
     'payments',
-    
 ]
+
 LEAFLET_CONFIG = {
     'DEFAULT_CENTER': (-1.286389, 36.817223), # Latitude, Longitude
     'DEFAULT_ZOOM': 13,
@@ -57,6 +72,7 @@ LEAFLET_CONFIG = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Added for production static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,7 +93,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-
             ],
         },
     },
@@ -89,11 +104,14 @@ WSGI_APPLICATION = 'carhire.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# dj_database_url will automatically parse the DATABASE_URL environment variable
+# e.g., postgres://USER:PASSWORD@HOST:PORT/NAME
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=600,        # Keeps connections open for 10 minutes (improves performance)
+        conn_health_checks=True, # Checks if a connection is still usable before using it
+    )
 }
 
 
@@ -133,12 +151,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = BASE_DIR / 'staticfiles' # Required for collectstatic in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' # Whitenoise caching
+
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-
-# Load the .env file
-load_dotenv()
 
 # Stripe Settings
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
