@@ -43,7 +43,7 @@ services:
       - "traefik.enable=true"
       
       # The domain where your app will be accessible
-      - "traefik.http.routers.fleet-web.rule=Host(`fleet.dazuhub.cloud`)"
+      - "traefik.http.routers.fleet-web.rule=Host(`fleet.dazuhub.hub`)"
       
       # Route through your secure entrypoint (HTTP->HTTPS handled by manager)
       - "traefik.http.routers.fleet-web.entrypoints=websecure"
