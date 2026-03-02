@@ -39,6 +39,7 @@ ALLOWED_HOSTS = os.environ.get(
     'melodee-interwrought-intemperately.ngrok-free.dev,127.0.0.1,localhost'
 ).split(',')
 
+CSRF_TRUSTED_ORIGINS = ['https://fleet.dazuhub.com']
 
 # Application definition
 
