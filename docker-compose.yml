@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: fleet_postgres
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      # These variables will be pulled from your .env file
+      POSTGRES_DB: ${DB_NAME:-fleet_db}
+      POSTGRES_USER: ${DB_USER:-fleet_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-super_secret_password}
+    networks:
+      # The database is ONLY on the internal network for security
+      - internal
+
+  # Django Web Application Service
+  web:
+    build: .
+    container_name: fleet_web
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      # Persist user-uploaded media files on the host machine
+      - ./media:/app/media
+    env_file:
+      - .env
+    environment:
+      # Construct the DATABASE_URL dynamically using variables from your .env file
+      - DATABASE_URL=postgres://${DB_USER:-fleet_user}:${DB_PASSWORD:-super_secret_password}@db:5432/${DB_NAME:-fleet_db}
+    networks:
+      # EXPOSES the project to the central Traefik manager
+      - traefik-public
+      # Allows communication with the database
+      - internal
+    labels:
+      - "traefik.enable=true"
+      
+      # The domain where your app will be accessible
+      - "traefik.http.routers.fleet-web.rule=Host(`fleet.dazuhub.cloud`)"
+      
+      # Route through your secure entrypoint (HTTP->HTTPS handled by manager)
+      - "traefik.http.routers.fleet-web.entrypoints=websecure"
+      
+      # Tell Traefik to use your global Let's Encrypt resolver named 'myresolver'
+      - "traefik.http.routers.fleet-web.tls.certresolver=myresolver"
+      
+      # Point Traefik to Gunicorn's internal port
+      - "traefik.http.services.fleet-web.loadbalancer.server.port=8000"
+
+      # Optional: Explicitly tell Traefik which network to use for routing
+      - "traefik.docker.network=traefik-public"
+
+networks:
+  # The external network created by your centralized Traefik manager
+  traefik-public:
+    external: true
+    
+  # An internal network so the web app can communicate securely with the database
+  internal:
+
+volumes:
+  # Persistent volume for PostgreSQL database data
+  postgres_data:
