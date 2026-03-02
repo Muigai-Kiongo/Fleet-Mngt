@@ -36,9 +36,16 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 # Allow hosts defined in the environment, falling back to localhost/ngrok
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS', 
-    'melodee-interwrought-intemperately.ngrok-free.dev,127.0.0.1,localhost'
+    'fleet.dazuhub.com,localhost,127.0.0.1'
 ).split(',')
 
+# ==========================================
+# REVERSE PROXY & CSRF SETTINGS
+# ==========================================
+# Tell Django it's behind a secure proxy (Traefik) so it doesn't fail CSRF checks on HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Trust your specific domain for CSRF verification
 CSRF_TRUSTED_ORIGINS = ['https://fleet.dazuhub.com']
 
 # Application definition
@@ -54,7 +61,6 @@ INSTALLED_APPS = [
     'fleet',
     'bookings',
     'payments',
-    
 ]
 
 LEAFLET_CONFIG = {
@@ -87,7 +93,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-
             ],
         },
     },
